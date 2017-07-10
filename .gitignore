@@ -1,0 +1,3 @@
+
+# Exclude non template test metadata files
+test/f_data_in_*
