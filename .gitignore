@@ -1,3 +1,4 @@
 
 # Exclude non template test metadata files
 test/f_data_in_*
+vs_projs/
