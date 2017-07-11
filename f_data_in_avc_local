@@ -1,10 +1,3 @@
-# Remove lines beginning with # sign as the program won't omit them
-#
-# File sepc :
-#     - Line[1]     : Number of files to read
-#     - Line[2]     : Absolute path the the folder containing the files
-#     - Line[3 - n] : Name of the files to load
-
 42
 U:\para\para_Map_Reduce\test_files
 Agnes-Grey.txt
