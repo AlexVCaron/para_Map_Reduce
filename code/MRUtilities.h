@@ -11,7 +11,11 @@ struct files_data
     unsigned nb_files;
     std::string path;
     std::vector<std::string> files;
-    std::vector<std::string> splitFiles(int i, int j) { return std::vector<std::string>(files.begin() + i, files.begin() + j + 1); }
+    files_data() : nb_files{ 0 } {}
+    files_data(files_data& f_d) : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } {}
+    files_data splitFiles(int i, int j) { files_data f_d(*this); f_d.files = std::vector<std::string>(files.begin() + i, files.begin() + j + 1); return f_d; }
+    std::vector<std::string>::iterator begin() { return files.begin(); }
+    std::vector<std::string>::iterator end() { return files.end(); }
 };
 
 template <class T>

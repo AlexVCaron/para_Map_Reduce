@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <thread>
 #include "FileReader.h"
+#include <future>
 
 using namespace std;
 
@@ -20,44 +21,48 @@ class mr_w_files
 {
     timer t_timer;
     time_stamp t_created,
-               t_called,
                t_start,
                t_end;
+    files_data f_d;
+    word_inspector w_i;
+
 public:
-    mr_w_files() { t_created = t_timer.now(); };
-    mr_w_files(word_inspector& w_i, string exec_type, unsigned nb_threads = 1);
-    ~mr_w_files();
-    class mr_impl
+
+    mr_w_files(word_inspector& w_i, files_data& f_d);
+
+    template <class exec_tag, class op_impl>
+    void start(map<string, unsigned>& m_p_out, unsigned nb_threads = 1);
+
+    class map_op_impl
     {
-        template<class T>
+    protected:
+        files_data f_d;
+        file_reader f_r;
+    public:
+        map_op_impl(word_inspector& w_i, files_data f_d) : f_d{ f_d }, f_r{ w_i } {}
+        template<class exec_tag, class T>
         void execute(T&) {};
     };
 private:
-    mr_impl m_r;
+    mr_w_files() { t_created = t_timer.now(); };
 };
 
-class seq_mr_impl : mr_w_files::mr_impl
+
+class thread_map_op_impl : mr_w_files::map_op_impl
 {
-    Metric m;
-    files_data f_d;
-    file_reader f_r;
+    Metric metric;
+public:
+    thread_map_op_impl(word_inspector& w_i, files_data f_d) : map_op_impl(w_i, f_d) {}
 
-    seq_mr_impl(word_inspector& w_i) : f_r{ w_i } {}
-
+    template <class exec_tag>
     void execute(map<string, unsigned>& m_p)
     {
         unsigned nb_words_read = 0;
-        vector<string> files = f_d.splitFiles(f_d.nb_files - 1, f_d.nb_files - 1);
         timer t;
-        m.beforeTest(t.now());
-        for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '\\' + file, m_p); });
-        m.afterTest(t.now(), nb_words_read);
+        metric.beforeTest<exec_tag>(t.now());
+        for_each(f_d.begin(), f_d.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '\\' + file, m_p); });
+        metric.afterTest<exec_tag>(t.now(), nb_words_read);
     }
-};
-
-class par_mr_impl : mr_w_files::mr_impl
-{
-    
 };
 
 #endif
