@@ -15,46 +15,50 @@ using namespace std;
 
 class mr_w_files
 {
-    timer t_timer;
-    time_stamp t_created,
-               t_start,
-               t_end;
+    GlobalMetric g_m;
     files_data f_d;
-    prot_adder_st nb_word_read;
 
 public:
     mr_w_files() = delete;
-    mr_w_files(files_data f_d) : f_d{ f_d }, impl{} { t_created = t_timer.now(); }
-    mr_w_files(files_data f_d, word_inspector w_i) : f_d{ f_d }, impl{ ruled_mr_w_files_impl(w_i) } { t_created = t_timer.now(); }
+    mr_w_files(files_data f_d, unsigned nb_threads = 1) : g_m{ nb_threads }, f_d { f_d }, impl{} { }
+    mr_w_files(files_data f_d, word_inspector w_i, unsigned nb_threads = 1) : g_m{ nb_threads }, f_d{ f_d }, impl{ ruled_mr_w_files_impl(w_i) } { }
 
-    void start(map<string, unsigned>& m_p_out, unsigned nb_threads = 1) {
+    GlobalMetric* getGlobalMetricPtr() { return &g_m; }
+
+    void start(map<string, unsigned>& m_p_out) {
+        unsigned nb_threads = g_m.getNbThreads();
+
         vector<future<map<string, unsigned>>> workers(0);
         vector<map<string, unsigned>> results;
 
         unsigned file_share = (nb_threads > 1) ? f_d.nb_files / (nb_threads - 1) : 1,
                  remaining_share = (nb_threads > 1) ? f_d.nb_files % (nb_threads - 1) : f_d.nb_files;
 
-        t_start = t_timer.now();
+        time_stamp t_start = g_m.registerStart();
         
         vector<thread_map_op_impl> work;
 
         for (unsigned i = 0; i < nb_threads - 1; ++i)
         {
-            work.push_back(impl.createOpImpl(std::forward<files_data>(f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1)), nb_word_read));
-            workers.emplace_back(async([&]() -> map<string, unsigned>
+            work.push_back(impl.createOpImpl(std::forward<files_data>(f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1)), g_m.getMetricPtr(i)));
+        }
+
+        for (unsigned i = 0; i < nb_threads - 1; ++i)
+        {
+            workers.emplace_back(async([](thread_map_op_impl* pt_impl) -> map<string, unsigned>
             {
                 map<string, unsigned> m_p;
-                work[i].execute<parallele_exec>(m_p);
+                pt_impl->execute<parallele_exec>(m_p);
                 return std::forward<map<string, unsigned>>(m_p);
-            }));
+            }, &work[i]));
         }
 
         if (remaining_share > 0) {
             results.resize(1);
-            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1), nb_word_read);
+            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1), g_m.getMetricPtr(nb_threads - 1));
             mp_op.execute<sequentiel_exec>(results.back());
         }
-        else { nb_word_read.startTransformations(); }
+        else { g_m.calculateNumberWordTreated(); }
 
         for (unsigned i = 0; i < workers.size(); ++i) {
             results.emplace_back(workers[i].get());
@@ -62,7 +66,7 @@ public:
 
         if (results.size() > 0) reduce(results, reduceMapVector);
 
-        t_end = t_timer.now();
+        time_stamp t_end = g_m.registerEnd();
 
         m_p_out = results.front();
     }
@@ -73,12 +77,12 @@ public:
         file_reader f_r;
         Metric metric;
         timer t;
-        thread_map_op_impl(file_reader f_r, files_data f_d) : f_d{ f_d }, f_r{ f_r }, t{} { }
+        thread_map_op_impl(file_reader& f_r, files_data& f_d) : f_d{ f_d }, f_r{ f_r }, t{} { }
     public:
-        thread_map_op_impl(files_data f_d, prot_adder_st& p_st) : f_d{ f_d }, f_r{ }, t{} { metric.synchroniseAdder(p_st); }
-        thread_map_op_impl(word_inspector w_i, files_data f_d, prot_adder_st& p_st) : f_d{ f_d }, f_r{ w_i }, t{} { metric.synchroniseAdder(p_st); }
+        thread_map_op_impl(files_data f_d, Metric* m) : f_d{ f_d }, f_r{ }, t{} { metric.synchroniseAdder(m); }
+        thread_map_op_impl(word_inspector w_i, files_data f_d, Metric* m) : f_d{ f_d }, f_r{ w_i }, t{} { metric.synchroniseAdder(m); }
         thread_map_op_impl(thread_map_op_impl& t_m) : thread_map_op_impl{ t_m.f_r, t_m.f_d } { metric = t_m.metric; t = t_m.t; }
-        thread_map_op_impl(thread_map_op_impl&& t_m) noexcept : thread_map_op_impl{ std::move(t_m.f_r), std::move(t_m.f_d) } { metric = std::move(t_m.metric); t = std::move(t_m.t); }
+        thread_map_op_impl(thread_map_op_impl&& t_m) noexcept : thread_map_op_impl{ t_m.f_r, t_m.f_d } { metric = std::move(t_m.metric); t = std::move(t_m.t); }
         template <class exec_tag>
         void execute(map<string, unsigned>& m_p)
         {
@@ -98,9 +102,10 @@ public:
     struct mr_w_files_impl
     {
         virtual ~mr_w_files_impl() = default;
-        virtual thread_map_op_impl&& createOpImpl(files_data f_d, prot_adder_st& nb_word_read)
+        virtual thread_map_op_impl createOpImpl(files_data f_d, Metric* m)
         {
-            return std::forward<thread_map_op_impl>(thread_map_op_impl(f_d, nb_word_read));
+            thread_map_op_impl impl(f_d, m);
+            return std::forward<thread_map_op_impl>(impl);
         }
     };
     struct ruled_mr_w_files_impl : mr_w_files_impl
@@ -108,9 +113,10 @@ public:
         word_inspector w_i;
         ruled_mr_w_files_impl() = delete;
         ruled_mr_w_files_impl(word_inspector w_i) : w_i{ w_i } {}
-        thread_map_op_impl&& createOpImpl(files_data f_d, prot_adder_st& nb_word_read)
+        thread_map_op_impl createOpImpl(files_data f_d, Metric* m)
         {
-            return std::forward<thread_map_op_impl>(thread_map_op_impl(w_i, f_d, nb_word_read));
+            thread_map_op_impl impl(w_i, f_d, m);
+            return std::forward<thread_map_op_impl>(impl);
         }
     };
 

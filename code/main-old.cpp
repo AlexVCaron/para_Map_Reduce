@@ -142,14 +142,14 @@ int main_old(int argc, char* argv[])
         for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '\\' + file, m_p[0]); });
         v_time.back() = t.now() - t_start;
         nb_w_treated.allowOperation();
-        while (nb_w_treated.registeredOperations() != nb_threads && nb_w_treated.hasPendingTransformations()) this_thread::sleep_for(40ms);
+        while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingTransformations()) this_thread::sleep_for(40ms);
         nb_w_treated.startTransformations();
         nb_w_treated.waitForTransform(&adder<size_t>::plus, nb_words_read);
     }
     else {
         if (exec_parallele)
         {
-            while (nb_w_treated.registeredOperations() != nb_threads && nb_w_treated.hasPendingTransformations()) this_thread::sleep_for(40ms);
+            while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingTransformations()) this_thread::sleep_for(40ms);
             nb_w_treated.startTransformations();
         }
         v_time.back() = time_length(0);

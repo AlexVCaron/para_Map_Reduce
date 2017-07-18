@@ -2,10 +2,10 @@
 #include "MRUtilities.h"
 #include "MRWFiles.h"
 #include "FileReader.h"
-#include "types.h"
 
 int main(int argc, char* argv[])
 {
+    char c;
     ifstream f_dtata(argv[1]);
     files_data f_d;
 
@@ -18,9 +18,11 @@ int main(int argc, char* argv[])
 
     f_dtata.close();
 
-    mr_w_files mr_w(f_d);
+    mr_w_files mr_w(f_d, thread::hardware_concurrency());
     map<string, unsigned> m_p;
 
-    mr_w.start(m_p, thread::hardware_concurrency());
+    mr_w.start(m_p);
+    GlobalMetric* metrics_ptr = mr_w.getGlobalMetricPtr();
+    cin >> c;
 
 }
