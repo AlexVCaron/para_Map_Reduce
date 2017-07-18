@@ -18,11 +18,16 @@ int main(int argc, char* argv[])
 
     f_dtata.close();
 
-    mr_w_files mr_w(f_d, thread::hardware_concurrency());
-    map<string, unsigned> m_p;
+    mr_w_files mr_w(f_d);
 
-    mr_w.start(m_p);
-    GlobalMetric* metrics_ptr = mr_w.getGlobalMetricPtr();
+    GlobalMetric g_m_parallele(thread::hardware_concurrency());
+    map<string, unsigned> m_p_parallele;
+    mr_w.start(m_p_parallele, &g_m_parallele);
+
+    GlobalMetric g_m_sequentielle(1);
+    map<string, unsigned> m_p_sequentielle;
+    mr_w.start(m_p_sequentielle, &g_m_sequentielle);
+
     cin >> c;
 
 }

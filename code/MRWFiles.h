@@ -15,18 +15,15 @@ using namespace std;
 
 class mr_w_files
 {
-    GlobalMetric g_m;
     files_data f_d;
 
 public:
     mr_w_files() = delete;
-    mr_w_files(files_data f_d, unsigned nb_threads = 1) : g_m{ nb_threads }, f_d { f_d }, impl{} { }
-    mr_w_files(files_data f_d, word_inspector w_i, unsigned nb_threads = 1) : g_m{ nb_threads }, f_d{ f_d }, impl{ ruled_mr_w_files_impl(w_i) } { }
+    mr_w_files(files_data f_d) : f_d { f_d }, impl{} { }
+    mr_w_files(files_data f_d, word_inspector w_i) : f_d{ f_d }, impl{ ruled_mr_w_files_impl(w_i) } { }
 
-    GlobalMetric* getGlobalMetricPtr() { return &g_m; }
-
-    void start(map<string, unsigned>& m_p_out) {
-        unsigned nb_threads = g_m.getNbThreads();
+    void start(map<string, unsigned>& m_p_out, GlobalMetric* g_m) {
+        unsigned nb_threads = g_m->getNbThreads();
 
         vector<future<map<string, unsigned>>> workers(0);
         vector<map<string, unsigned>> results;
@@ -34,13 +31,13 @@ public:
         unsigned file_share = (nb_threads > 1) ? f_d.nb_files / (nb_threads - 1) : 1,
                  remaining_share = (nb_threads > 1) ? f_d.nb_files % (nb_threads - 1) : f_d.nb_files;
 
-        time_stamp t_start = g_m.registerStart();
+        time_stamp t_start = g_m->registerStart();
         
         vector<thread_map_op_impl> work;
 
         for (unsigned i = 0; i < nb_threads - 1; ++i)
         {
-            work.push_back(impl.createOpImpl(std::forward<files_data>(f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1)), g_m.getMetricPtr(i)));
+            work.push_back(impl.createOpImpl(std::forward<files_data>(f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1)), g_m->getMetricPtr(i)));
         }
 
         for (unsigned i = 0; i < nb_threads - 1; ++i)
@@ -55,10 +52,10 @@ public:
 
         if (remaining_share > 0) {
             results.resize(1);
-            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1), g_m.getMetricPtr(nb_threads - 1));
+            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1), g_m->getMetricPtr(nb_threads - 1));
             mp_op.execute<sequentiel_exec>(results.back());
         }
-        else { g_m.calculateNumberWordTreated(); }
+        else { g_m->calculateNumberWordTreated(); }
 
         for (unsigned i = 0; i < workers.size(); ++i) {
             results.emplace_back(workers[i].get());
@@ -66,7 +63,7 @@ public:
 
         if (results.size() > 0) reduce(results, reduceMapVector);
 
-        time_stamp t_end = g_m.registerEnd();
+        time_stamp t_end = g_m->registerEnd();
 
         m_p_out = results.front();
     }
