@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <iostream>
 
 struct files_data
 {
@@ -12,10 +13,12 @@ struct files_data
     std::string path;
     std::vector<std::string> files;
     files_data() : nb_files{ 0 } {}
-    files_data(files_data& f_d) : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } {}
-    files_data splitFiles(int i, int j) { files_data f_d(*this); f_d.files = std::vector<std::string>(files.begin() + i, files.begin() + j + 1); return f_d; }
+    files_data(files_data& f_d) : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } { std::cout << "f_d copied" << std::endl; }
+    files_data(files_data&& f_d) noexcept : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } { std::cout << "f_d moved" << std::endl; }
+    files_data splitFiles(int i, int j) { files_data f_d; f_d.path = path; f_d.files = std::vector<std::string>(files.begin() + i, files.begin() + j + 1); f_d.nb_files = f_d.files.size(); return std::forward<files_data>(f_d); }
     std::vector<std::string>::iterator begin() { return files.begin(); }
     std::vector<std::string>::iterator end() { return files.end(); }
+    files_data& operator=(files_data& f_d) { nb_files = f_d.nb_files; path = f_d.path; files = f_d.files; return *this; }
 };
 
 template <class T>

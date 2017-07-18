@@ -14,8 +14,7 @@ struct protectedT
     bool can_transform = false;
 
     protectedT() {}
-    protectedT(T&& t) : t{ t } {}
-
+    protectedT(const T&& t) : t{ t } {}
     void registerOperation()
     {
         std::unique_lock<std::mutex> u_l{ m };

@@ -18,11 +18,9 @@ int main(int argc, char* argv[])
 
     f_dtata.close();
 
-    word_inspector w_i{};
-
-    mr_w_files mr_w(w_i, f_d);
+    mr_w_files mr_w(f_d);
     map<string, unsigned> m_p;
 
-    mr_w.start<parallele_exec_tag, thread_map_op_impl>(m_p, thread::hardware_concurrency());
+    mr_w.start(m_p, thread::hardware_concurrency());
 
 }

@@ -7,7 +7,7 @@ mr_w_files::mr_w_files(word_inspector& w_i, files_data& f_d) : mr_w_files()
 }
 
 template <class exec_tag, class op_impl>
-void mr_w_files::start(map<string, unsigned>& m_p_out, unsigned nb_threads)
+inline void mr_w_files::start(map<string, unsigned>& m_p_out, unsigned nb_threads)
 {
     vector<future<map<string, unsigned>>> workers;
     vector<map<string, unsigned>> results(1);
