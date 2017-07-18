@@ -4,10 +4,8 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <algorithm>
 #include <utility>
 #include <fstream>
-#include <iterator>
 
 struct word_inspector
 {
@@ -18,7 +16,7 @@ public:
     word_inspector() = delete;
     word_inspector(rule r) : r{ r } {};
     word_inspector(word_inspector& w_i) : r{ w_i.r } {}
-    bool inspect(std::string s) { return r(s); }
+    bool inspect(std::string s) const { return r(s); }
 };
 
 struct file_reader
