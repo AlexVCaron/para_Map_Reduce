@@ -72,7 +72,7 @@ class GlobalMetric
 public:
     // Constructors
     GlobalMetric() = delete;
-    GlobalMetric(unsigned nb_threads) : th_metrics{ nb_threads }, t_created{ t_timer.now() }, total_nb_word_read{ }
+    GlobalMetric(unsigned nb_threads) : th_metrics{ nb_threads + 1 }, t_created{ t_timer.now() }, total_nb_word_read{ }
     {
         initThreadsMetrics();
     }
@@ -94,7 +94,7 @@ public:
     // The other methods are non-blocking and should be used only when threads have finished working, except for
     // getNbThreads() and getCreationTime(), which are available right after creation.
 
-    unsigned getNbThreads() const { return th_metrics.size(); }
+    unsigned getNbThreads() const { return th_metrics.size() - 1; }
 
     time_stamp getCreationTime() const { return t_created; }
 

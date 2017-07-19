@@ -43,6 +43,10 @@ struct protectedT
         }
         else c_v.wait(u_l);
     }
+    T getResultNoWait()
+    {
+        return t;
+    }
     T getResult()
     {
         using namespace std::literals::chrono_literals;
