@@ -1,6 +1,8 @@
 #ifndef PROTECTED_T_H
 #define PROTECTED_T_H
 
+#include <functional>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 
@@ -35,7 +37,7 @@ struct protectedT
     {
         std::unique_lock<std::mutex> u_l(m);
         if (can_transform) {
-            auto f_t = bind(f, &t, std::forward<Arg>(arg));
+            auto f_t = std::bind(f, &t, std::forward<Arg>(arg));
             f_t();
             --t_register;
         }

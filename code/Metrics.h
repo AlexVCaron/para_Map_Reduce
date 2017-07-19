@@ -1,6 +1,8 @@
 #ifndef METRICS_H
 #define METRICS_H
 
+#include "types.h"
+#include "MRUtilities.h"
 #include "ProtectedT.h"
 
 using prot_adder_st = protectedT<adder<size_t>>;
