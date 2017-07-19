@@ -23,7 +23,7 @@ struct file_reader
 {
     struct f_r_impl
     {
-
+        f_r_impl() {}
         virtual void checkAndEmplace(std::string word, std::map<std::string, unsigned>& m)
         {
             auto it = m.find(word);

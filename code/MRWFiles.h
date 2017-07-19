@@ -74,7 +74,7 @@ public:
         file_reader f_r;
         Metric metric;
         timer t;
-        thread_map_op_impl(file_reader& f_r, files_data& f_d) : f_d{ f_d }, f_r{ f_r }, t{} { }
+        thread_map_op_impl(file_reader f_r, files_data& f_d) : f_d{ f_d }, f_r{ f_r }, t{} { }
     public:
         thread_map_op_impl(files_data f_d, Metric* m) : f_d{ f_d }, f_r{ }, t{} { metric.synchroniseAdder(m); }
         thread_map_op_impl(word_inspector w_i, files_data f_d, Metric* m) : f_d{ f_d }, f_r{ w_i }, t{} { metric.synchroniseAdder(m); }
