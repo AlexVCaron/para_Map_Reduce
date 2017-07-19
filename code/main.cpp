@@ -34,6 +34,54 @@ void showData(map<string, unsigned>& m_p, unsigned nb_mot_traites)
     cout << " +" << setfill('-') << setw(47) << "+" << endl;
 }
 
+void showTestData(unsigned int nb_fichiers, unsigned nb_mot_traites, time_length duration, string test_out_filename)
+{
+	cout << nb_fichiers << " fichiers, " << nb_mot_traites << " mots, " << duration.count() /1000 << " ms." << endl;
+	cout << "Resultats detailles dans \"" << test_out_filename << "\"" << endl;
+}
+
+int runner(mr_w_files &mr_w, unsigned int nb_files)
+{
+	char c;
+	float temps_total;
+	//Spanner un test
+	// 1) La global metric
+	//		On y passe le # de thread (si juste 1 = sequentiel)
+	GlobalMetric g_m_parallele(thread::hardware_concurrency());
+	map<string, unsigned> m_p_parallele;
+	mr_w.start(m_p_parallele, &g_m_parallele);
+
+	// Sequentiel
+	GlobalMetric g_m_sequentielle(1);
+	map<string, unsigned> m_p_sequentielle;
+	mr_w.start(m_p_sequentielle, &g_m_sequentielle);
+
+	cout << "\nSequentielle" << endl;
+	showTestData(nb_files, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), "out-sequentiel.txt");
+
+	cout << "\nParallele (sans seuil pour l'instant)" << endl;
+	showTestData(nb_files, g_m_parallele.getNumberWordTreated(), g_m_parallele.getDuration(), "out-parallele.txt");
+
+	temps_total = (g_m_parallele.getDuration() + g_m_sequentielle.getDuration()).count()/ 1000.f;
+	
+	//Algorithme sequetiel : __% du temps total
+	cout << "\nAlgorithme sequentiel :";
+	cout << g_m_sequentielle.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
+
+	//Algorithme parallèles :
+	cout << "\nAlgorithmes paralleles :" << endl;
+
+	// sans seuil sequentiel
+	cout << "	sans seuil sequentiel, " << g_m_parallele.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
+
+	// seuil séquentiel 32, __% du temps total
+	// seuil séquentiel 64, __% du temps total
+	// seuil séquentiel 128, __% du temps total
+	// seuil séquentiel 256, __% du temps total
+	// seuil séquentiel 512, __% du temps total
+	// seuil séquentiel 1024, __% du temps total
+}
+
 int main(int argc, char* argv[])
 {
     char c;
@@ -48,23 +96,32 @@ int main(int argc, char* argv[])
     f_d.files.resize(f_d.nb_files);
 
     f_dtata.close();
+	cout << " | " << f_d.nb_files << " fichiers a traiter charges en memoire..." << endl;
 
+	//S'occupe de l'exec
+	// Prend le file data pour faire ses tests
     mr_w_files mr_w(f_d);
 
-    GlobalMetric g_m_parallele(thread::hardware_concurrency());
-    map<string, unsigned> m_p_parallele;
-    mr_w.start(m_p_parallele, &g_m_parallele);
+	if (string(argv[2]) == "tester") runner(mr_w, f_d.nb_files);
+	else 
+	{
+		//Spanner un test
+		// 1) La global metric
+		//		On y passe le # de thread (si juste 1 = sequentiel)
+		GlobalMetric g_m_parallele(thread::hardware_concurrency());
+		map<string, unsigned> m_p_parallele;
+		mr_w.start(m_p_parallele, &g_m_parallele);
 
-    GlobalMetric g_m_sequentielle(1);
-    map<string, unsigned> m_p_sequentielle;
-    mr_w.start(m_p_sequentielle, &g_m_sequentielle);
+		GlobalMetric g_m_sequentielle(1);
+		map<string, unsigned> m_p_sequentielle;
+		mr_w.start(m_p_sequentielle, &g_m_sequentielle);
 
-    cout << "Sequentielle" << endl;
-    showData(m_p_sequentielle, g_m_sequentielle.getNumberWordTreated());
+		cout << "Sequentielle" << endl;
+		showData(m_p_sequentielle, g_m_sequentielle.getNumberWordTreated());
 
-    cout << "Parallele" << endl;
-    showData(m_p_parallele, g_m_parallele.getNumberWordTreated());
-
+		cout << "Parallele" << endl;
+		showData(m_p_parallele, g_m_parallele.getNumberWordTreated());
+	}
     cin >> c;
 
 }
