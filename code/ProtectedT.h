@@ -35,8 +35,8 @@ struct protectedT
     {
         std::unique_lock<std::mutex> u_l(m);
         if (can_transform) {
-            auto f_t = mem_fn(f);
-            f_t(t, std::forward<Arg>(arg));
+            auto f_t = bind(f, &t, std::forward<Arg>(arg));
+            f_t();
             --t_register;
         }
         else c_v.wait(u_l);

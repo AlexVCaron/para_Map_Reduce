@@ -52,7 +52,7 @@ public:
 
         if (remaining_share > 0) {
             results.resize(1);
-            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1), g_m->getMetricPtr(nb_threads - 1));
+            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share, f_d.nb_files - 1), g_m->getMetricPtr(nb_threads - 1));
             mp_op.execute<sequentiel_exec>(results.back());
         }
         else { g_m->calculateNumberWordTreated(); }
