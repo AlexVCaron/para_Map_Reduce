@@ -2,6 +2,37 @@
 #include "MRUtilities.h"
 #include "MRWFiles.h"
 #include "FileReader.h"
+#include <iomanip>
+
+void show(map<string, unsigned> m_p)
+{
+    cout << " +" << setfill('-') << setw(22) << "+" << setfill('-') << setw(14) << "+" << endl;
+    cout << " | Mot" << setfill(' ') << setw(19) << " | " << "Apparition | " << endl;
+    cout << " +" << setfill('-') << setw(22) << "+" << setfill('-') << setw(14) << "+" << endl;
+    for_each(m_p.begin(), m_p.end(), [](auto m_pair)
+    {
+        cout << " | " << setfill(' ') << setw(19) << m_pair.first << " |     " << m_pair.second << setw(9 - to_string(m_pair.second).size()) << " |" << endl;
+    });
+    cout << " +" << setfill('-') << setw(22) << "+" << setfill('-') << setw(14) << "+" << endl;
+}
+
+void showData(map<string, unsigned>& m_p, unsigned nb_mot_traites)
+{
+    float divs[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+    unsigned i = 0;
+    auto p_mot_it = m_p.begin();
+    cout << endl;
+    cout << " | Nombre de mots dans le map : " << m_p.size() << endl;
+    cout << " | Nombre de mots traites     : " << nb_mot_traites << endl;
+    cout << " +" << setfill('-') << setw(47) << "+" << endl;
+    cout << " |     1er mot : " << p_mot_it->first << setfill(' ') << setw(20 - p_mot_it->first.length()) << " = " << setw(5) << p_mot_it->second << " fois +" << endl;
+    for_each(divs, divs + 10, [&](float div)
+    {
+        while (i != int(div * m_p.size()) - 1) { ++i; ++p_mot_it; }
+        cout << " | " << setfill(' ') << setw(6) << i << "e mot : " << p_mot_it->first << setfill(' ') << setw(20 - p_mot_it->first.length()) << " = " << setw(5) << p_mot_it->second << " fois +" << endl;
+    });
+    cout << " +" << setfill('-') << setw(47) << "+" << endl;
+}
 
 int main(int argc, char* argv[])
 {
@@ -27,6 +58,12 @@ int main(int argc, char* argv[])
     GlobalMetric g_m_sequentielle(1);
     map<string, unsigned> m_p_sequentielle;
     mr_w.start(m_p_sequentielle, &g_m_sequentielle);
+
+    cout << "Sequentielle" << endl;
+    showData(m_p_sequentielle, g_m_sequentielle.getNumberWordTreated());
+
+    cout << "Parallele" << endl;
+    showData(m_p_parallele, g_m_parallele.getNumberWordTreated());
 
     cin >> c;
 
