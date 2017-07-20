@@ -3,6 +3,8 @@
 #include "MRWFiles.h"
 #include "FileReader.h"
 #include <iomanip>
+#include <vector>
+#include <numeric>
 
 void show(map<string, unsigned> m_p)
 {
@@ -36,7 +38,7 @@ void showData(map<string, unsigned>& m_p, unsigned nb_mot_traites, ostream &out_
 
 void showTestData(unsigned int nb_fichiers, unsigned nb_mot_traites, time_length duration, string test_out_filename, ostream &out_stream)
 {
-	out_stream << nb_fichiers << " fichiers, " << nb_mot_traites << " mots, " << duration.count() /1000 << " ms." << endl;
+	out_stream << nb_fichiers << " fichiers, " << nb_mot_traites << " mots, " << chrono::duration_cast<time_unit>(duration).count() << " ms." << endl;
 	if(&out_stream == &cout) out_stream << "Resultats detailles dans \"" << test_out_filename << "\"" << endl;
 }
 
@@ -73,11 +75,26 @@ void createOutTestFile(string filename, unsigned int nb_fichiers, map<string, un
 	else cout << "Unable to open file";
 }
 
-int runner(mr_w_files &mr_w, unsigned int nb_files)
+unsigned int parallele_cap(unsigned cap, mr_w_files &mr_w, map<string, unsigned> &m_p_parallele, string &out_para, unsigned int nb_files)
+{
+	GlobalMetric g_m_parallele_cap(thread::hardware_concurrency());
+	m_p_parallele.clear();
+	mr_w.start(m_p_parallele, &g_m_parallele_cap, cap);
+
+	out_para = "out-parallele-" + to_string(cap) + ".txt";
+	cout << "\nParallele (seuil 10)" << endl;
+	createOutTestFile(out_para, nb_files, m_p_parallele, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getThreadsWorkTime());
+	showTestData(nb_files, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para, cout);
+	return chrono::duration_cast<time_unit>(g_m_parallele_cap.getDuration()).count();
+}
+
+void runner(mr_w_files &mr_w, unsigned int nb_files)
 {
 	char c;
 	string out_seq, out_para;
 	float temps_total;
+	vector<unsigned> para_durations(6);
+
 	//Spanner un test
 	// 1) La global metric
 	//		On y passe le # de thread (si juste 1 = sequentiel)
@@ -92,14 +109,18 @@ int runner(mr_w_files &mr_w, unsigned int nb_files)
     createOutTestFile(out_para, nb_files, m_p_parallele, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getThreadsWorkTime());
     showTestData(nb_files, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para, cout);
 
-    GlobalMetric g_m_parallele_cap(thread::hardware_concurrency());
-    m_p_parallele.clear();
-    mr_w.start(m_p_parallele, &g_m_parallele_cap, 10);
-
-    out_para = "out-parallele-10.txt";
-    cout << "\nParallele (seuil 10)" << endl;
-    createOutTestFile(out_para, nb_files, m_p_parallele, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getThreadsWorkTime());
-    showTestData(nb_files, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para, cout);
+	// seuil séquentiel 32, __% du temps total
+	para_durations[0] = (parallele_cap(32, mr_w, m_p_parallele, out_para, nb_files));
+	// seuil séquentiel 64, __% du temps total
+	para_durations[1] = parallele_cap(64, mr_w, m_p_parallele, out_para, nb_files);
+	// seuil séquentiel 128, __% du temps total
+	para_durations[2] = parallele_cap(128, mr_w, m_p_parallele, out_para, nb_files);
+	// seuil séquentiel 256, __% du temps total
+	para_durations[3] = parallele_cap(256, mr_w, m_p_parallele, out_para, nb_files);
+	// seuil séquentiel 512, __% du temps total
+	para_durations[4] = parallele_cap(512, mr_w, m_p_parallele, out_para, nb_files);
+	// seuil séquentiel 1024, __% du temps total
+	para_durations[5] = parallele_cap(1024, mr_w, m_p_parallele, out_para, nb_files);
 
 	// Sequentiel
 
@@ -114,25 +135,25 @@ int runner(mr_w_files &mr_w, unsigned int nb_files)
 	createOutTestFile(out_seq, nb_files, m_p_sequentielle, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
 	showTestData(nb_files, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq, cout);
 
-	temps_total = (g_m_parallele_no_cap.getDuration() + g_m_parallele_cap.getDuration() + g_m_sequentielle.getDuration()).count()/ 1000.f;
+	temps_total = (chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() + 
+				   accumulate(para_durations.begin(), para_durations.end(), unsigned(0)) + 
+		           chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count());
 	
 	//Algorithme sequetiel : __% du temps total
 	cout << endl << "Algorithme sequentiel :";
-	cout << g_m_sequentielle.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
+	cout << chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count() / temps_total * 100.f << "% du temps total" << endl;
 
 	//Algorithme parallèles :
 	cout << endl << "Algorithmes paralleles :" << endl;
 
 	// sans seuil sequentiel
-	cout << "	sans seuil sequentiel, " << g_m_parallele_no_cap.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
-    cout << "	seuil sequentiel 10  , " << g_m_parallele_cap.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
+	cout << "	sans seuil sequentiel, " << chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() / temps_total * 100.f << "% du temps total" << endl;
 
-	// seuil séquentiel 32, __% du temps total
-	// seuil séquentiel 64, __% du temps total
-	// seuil séquentiel 128, __% du temps total
-	// seuil séquentiel 256, __% du temps total
-	// seuil séquentiel 512, __% du temps total
-	// seuil séquentiel 1024, __% du temps total
+	unsigned seuil = 32;
+	for_each(para_durations.begin(), para_durations.end(), [&](unsigned& dur) {
+		cout << "	seuil sequentiel " << seuil << "  , " << dur / temps_total * 100.f << "% du temps total" << endl;
+		seuil *= 2;
+	});
 }
 
 int main(int argc, char* argv[])
