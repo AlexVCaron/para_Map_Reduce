@@ -13,6 +13,8 @@
 
 using namespace std;
 using prot_sub = protectedT<subber<unsigned>>;
+using prot_f_d = protectedT<files_data>;
+
 class mr_w_files
 {
     files_data f_d;
@@ -36,39 +38,42 @@ public:
         time_stamp t_start = g_m->registerStart();
         
         vector<thread_map_op_impl> work;
-        vector<vector<string>> remaining_files(nb_threads - 1, vector<string>(0));
+
+        prot_f_d remaining_files;
+        remaining_files.startTransformations();
 
         for (unsigned i = 0; i < nb_threads - 1; ++i)
         {
             work.push_back(impl.createOpImpl(std::forward<files_data>(f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1)), g_m->getMetricPtr(i)));
         }
-
+        
         for (unsigned i = 0; i < nb_threads - 1; ++i)
         {
-            workers.emplace_back(async([&](thread_map_op_impl* pt_impl) -> map<string, unsigned>
+            workers.emplace_back(async([&](thread_map_op_impl* pt_impl, prot_f_d* r_files) -> map<string, unsigned>
             {
                 map<string, unsigned> m_p;
-                pt_impl->execute<parallele_exec>(m_p, nb_files_treated, remaining_files[i]);
+                pt_impl->execute<parallele_exec>(m_p, nb_files_treated, r_files);
                 return std::forward<map<string, unsigned>>(m_p);
-            }, &work[i]));
+            }, &work[i], &remaining_files));
         }
 
         if (remaining_share > 0) {
             results.resize(1);
-            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share, f_d.nb_files - 1), g_m->getMetricPtr(nb_threads - 2));
+            thread_map_op_impl mp_op = impl.createOpImpl(f_d.splitFiles(f_d.nb_files - remaining_share, f_d.nb_files - 1), g_m->getMetricPtr(nb_threads - 1));
             mp_op.execute<sequentiel_exec>(results.back());
         }
         else { g_m->calculateNumberWordTreated(); }
-
+        
         for (unsigned i = 0; i < workers.size(); ++i) {
             results.emplace_back(workers[i].get());
         }
 
-        coalesceVector(remaining_files);
+        files_data f_remains = remaining_files.getResult();
+        f_remains.path = f_d.path;
 
-        if (remaining_files[0].size() > 0) {
-            files_data remainder; remainder.path = f_d.path;
-            thread_map_op_impl mp_op = impl.createOpImpl(remainder.addFiles(remaining_files[0]), g_m->getMetricPtr(nb_threads - 1));
+        if (f_remains.nb_files > 0) {
+            results.resize(results.size() + 1);
+            thread_map_op_impl mp_op = impl.createOpImpl(f_remains, g_m->getMetricPtr(nb_threads));
             mp_op.execute<sequentiel_exec>(results.back());
         }
 
@@ -108,19 +113,21 @@ public:
             metric.afterTest<tag>(t.now(), nb_words_read);
         }
         template <class exec_tag>
-        void execute(map<string, unsigned>& m_p, prot_sub& nb_files_treated, vector<string>& remaining_files, exec_tag e)
+        void execute(map<string, unsigned>& m_p, prot_sub& nb_files_treated, prot_f_d* remaining_files, exec_tag e)
         {
             using tag = typename exec_traits<exec_tag>::exec_category;
             unsigned nb_words_read = 0;
-            nb_files_treated.registerOperation();
+            remaining_files->registerOperation();
             metric.beforeTest<tag>(t.now());
             auto last_treated_file_it = find_if(f_d.begin(), f_d.end(), [&](string& file) { 
+                if (nb_files_treated.getResultNoWait().t == 0u) return true;
+                nb_files_treated.registerOperation();
                 nb_words_read += f_r.read(f_d.path + '\\' + file, m_p);
                 nb_files_treated.waitForTransform(&subber<unsigned>::minus, 1u);
-                return nb_files_treated.getResultNoWait().t == 0u;
+                return false;
             });
             vector<string> v_i(last_treated_file_it, f_d.end());
-            remaining_files = v_i;
+            remaining_files->waitForTransform(&files_data::addFiles, v_i);
             metric.afterTest<tag>(t.now(), nb_words_read);
         }
     };

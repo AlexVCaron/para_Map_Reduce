@@ -14,6 +14,7 @@ struct files_data
     files_data() : nb_files{ 0 } {}
     files_data(files_data& f_d) : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } { }
     files_data(files_data&& f_d) noexcept : nb_files{ f_d.nb_files }, path{ f_d.path }, files{ f_d.files } { }
+    void addPath(std::string pth) { path = pth; }
     files_data splitFiles(int i, int j) { files_data f_d; f_d.path = path; f_d.files = std::vector<std::string>(files.begin() + i, files.begin() + j + 1); f_d.nb_files = f_d.files.size(); return std::forward<files_data>(f_d); }
     files_data& addFiles(std::vector<std::string> v_f) {
         std::for_each(v_f.begin(), v_f.end(), [&](std::string& f_name) {
