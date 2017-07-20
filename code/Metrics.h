@@ -59,7 +59,6 @@ class GlobalMetric
 {
     timer t_timer;
 
-    // Thread metrics
     std::vector<Metric> th_metrics;
 
     // Global metrics
@@ -96,10 +95,12 @@ public:
 
     unsigned getNbThreads() const { return th_metrics.size() - 1; }
 
+	// Du global metric
     time_stamp getCreationTime() const { return t_created; }
 
     unsigned getNumberWordTreated() { total_nb_word_read.startTransformations(); return total_nb_word_read.getResult().t; }
 
+	// Lancer calcul sans aller chercher le nombre de mot traiter
     void calculateNumberWordTreated() { total_nb_word_read.startTransformations(); }
 
     std::vector<unsigned> getIndividualNumberWordTreated()
