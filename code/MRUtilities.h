@@ -48,6 +48,19 @@ struct subber
     void minus(T& o_t) { t = t - o_t; }
 };
 
+template<>
+struct subber<unsigned>
+{
+    unsigned t;
+    subber() : t{} {}
+    subber(unsigned& t) : t{ t } {}
+    subber(unsigned&& t) : t{ t } {}
+    void minus(unsigned& o_t)
+    {
+        if (t != 0) t -= o_t;
+    }
+};
+
 template <class T, class F>
 void reduce(std::vector<T>& m_p, F& f)
 {

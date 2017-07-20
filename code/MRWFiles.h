@@ -26,7 +26,7 @@ public:
 
     void start(map<string, unsigned>& m_p_out, GlobalMetric* g_m, unsigned cap_to_seq = 0) {
         unsigned nb_threads = g_m->getNbThreads();
-        prot_sub nb_files_treated(f_d.nb_files);
+        prot_sub nb_files_treated(f_d.nb_files - cap_to_seq);
         nb_files_treated.startTransformations();
 
         vector<future<map<string, unsigned>>> workers(0);
