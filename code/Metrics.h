@@ -16,7 +16,7 @@ protected:
 public:
     Metric(): nb_words_treated{ 0 } { }
 
-    Metric(const Metric& m) : t_begin{ m.t_begin }, t_end{ m.t_end }, nb_words_treated{ 0 }, total_nb_w_treated_ptr{ m.total_nb_w_treated_ptr } { }
+    Metric(const Metric& m) : total_nb_w_treated_ptr{ m.total_nb_w_treated_ptr }, t_begin{ m.t_begin }, t_end{ m.t_end }, nb_words_treated{ 0 } { }
 
     void synchroniseAdder(Metric* m) volatile
     {

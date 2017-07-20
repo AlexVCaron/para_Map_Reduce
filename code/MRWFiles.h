@@ -88,14 +88,14 @@ public:
     {
         files_data f_d;
         file_reader f_r;
-        Metric metric;
+        Metric* metric;
         timer t;
-        thread_map_op_impl(file_reader f_r, files_data& f_d) : f_d{ f_d }, f_r{ f_r }, t{} { }
+        thread_map_op_impl(file_reader f_r, files_data& f_d) : f_d{ f_d }, f_r{ f_r }, metric{ nullptr }, t {} { }
     public:
-        thread_map_op_impl(files_data f_d, Metric* m) : f_d{ f_d }, f_r{ }, t{} { metric.synchroniseAdder(m); }
-        thread_map_op_impl(word_inspector w_i, files_data f_d, Metric* m) : f_d{ f_d }, f_r{ w_i }, t{} { metric.synchroniseAdder(m); }
+        thread_map_op_impl(files_data f_d, Metric* m) : f_d{ f_d }, f_r{}, metric{ m }, t {} {}
+        thread_map_op_impl(word_inspector w_i, files_data f_d, Metric* m) : f_d{ f_d }, f_r{ w_i }, metric{ m }, t{} { }
         thread_map_op_impl(thread_map_op_impl& t_m) : thread_map_op_impl{ t_m.f_r, t_m.f_d } { metric = t_m.metric; t = t_m.t; }
-        thread_map_op_impl(thread_map_op_impl&& t_m) noexcept : thread_map_op_impl{ t_m.f_r, t_m.f_d } { metric = std::move(t_m.metric); t = std::move(t_m.t); }
+        thread_map_op_impl(thread_map_op_impl&& t_m) noexcept : thread_map_op_impl{ t_m.f_r, t_m.f_d } { metric = t_m.metric; t = std::move(t_m.t); }
         template <class exec_tag, class ... Args>
         void execute(Args&& ... args)
         {
@@ -106,11 +106,11 @@ public:
         {
             using tag = typename exec_traits<exec_tag>::exec_category;
             unsigned nb_words_read = 0;
-            metric.beforeTest<tag>(t.now());
+            metric->beforeTest<tag>(t.now());
             for_each(f_d.begin(), f_d.end(), [&](string& file) {
                 nb_words_read += f_r.read(f_d.path + '\\' + file, m_p);
             });
-            metric.afterTest<tag>(t.now(), nb_words_read);
+            metric->afterTest<tag>(t.now(), nb_words_read);
         }
         template <class exec_tag>
         void execute(map<string, unsigned>& m_p, prot_sub& nb_files_treated, prot_f_d* remaining_files, exec_tag e)
@@ -118,7 +118,7 @@ public:
             using tag = typename exec_traits<exec_tag>::exec_category;
             unsigned nb_words_read = 0;
             remaining_files->registerOperation();
-            metric.beforeTest<tag>(t.now());
+            metric->beforeTest<tag>(t.now());
             auto last_treated_file_it = find_if(f_d.begin(), f_d.end(), [&](string& file) { 
                 if (nb_files_treated.getResultNoWait().t == 0u) return true;
                 nb_files_treated.registerOperation();
@@ -128,7 +128,7 @@ public:
             });
             vector<string> v_i(last_treated_file_it, f_d.end());
             remaining_files->waitForTransform(&files_data::addFiles, v_i);
-            metric.afterTest<tag>(t.now(), nb_words_read);
+            metric->afterTest<tag>(t.now(), nb_words_read);
         }
     };
 

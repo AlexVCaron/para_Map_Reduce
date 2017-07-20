@@ -44,9 +44,12 @@ void showTime(vector<time_length>& v_t, ostream &out_stream)
 {
 	unsigned i = 0;
 	auto end = v_t.end(); --end;
+    auto main_ts = *end; --end;
+    main_ts += *end;
 	out_stream << endl;
-	out_stream << " |-> Thread_main" << " : " << chrono::duration_cast<time_unit>(*end).count() << setfill(' ') << setw(8) << "  (ms)" << endl;
-	if (v_t.size() > 1) out_stream << " +----+" << endl;
+    out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
+	out_stream << " |-> Thread_main" << " : " << chrono::duration_cast<time_unit>(main_ts).count() << setfill(' ') << setw(8) << "  (ms)" << endl;
+	if (v_t.size() > 2) out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
 	for_each(v_t.begin(), end, [&](time_length& t_s)
 	{
 		out_stream << "      |-> Thread_" << i << setfill(' ') << setw(4) << " : " << chrono::duration_cast<time_unit>(t_s).count() << setw(8) << "  (ms)" << endl;
@@ -58,7 +61,7 @@ void showTime(vector<time_length>& v_t, ostream &out_stream)
 	out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
 }
 
-void createOutTestFile(string filename, unsigned int nb_fichiers, map<string, unsigned>& m_p, unsigned nb_mot_traite, time_length duration, vector<time_length>& v_t)
+void createOutTestFile(string filename, unsigned int nb_fichiers, map<string, unsigned>& m_p, unsigned nb_mot_traite, time_length duration, vector<time_length> v_t)
 {
 	ofstream myfile(filename);
 	if (myfile.is_open())
@@ -78,34 +81,38 @@ int runner(mr_w_files &mr_w, unsigned int nb_files)
 	//Spanner un test
 	// 1) La global metric
 	//		On y passe le # de thread (si juste 1 = sequentiel)
+    cout << "Traitement parallele debute" << endl;
+
 	GlobalMetric g_m_parallele(thread::hardware_concurrency());
 	map<string, unsigned> m_p_parallele;
 	mr_w.start(m_p_parallele, &g_m_parallele);
 
+    out_para = "out-parallele.txt";
+    cout << "\nParallele (sans seuil pour l'instant)" << endl;
+    createOutTestFile(out_para, nb_files, m_p_parallele, g_m_parallele.getNumberWordTreated(), g_m_parallele.getDuration(), g_m_parallele.getThreadsWorkTime());
+    showTestData(nb_files, g_m_parallele.getNumberWordTreated(), g_m_parallele.getDuration(), out_para, cout);
+
 	// Sequentiel
+
+    cout << endl << "Traitement sequentiel debute" << endl;
 	
 	GlobalMetric g_m_sequentielle(1);
 	map<string, unsigned> m_p_sequentielle;
 	mr_w.start(m_p_sequentielle, &g_m_sequentielle);
 
 	out_seq = "out-sequentiel.txt";
-	cout << "\nSequentielle" << endl;
+	cout << endl << "Sequentielle" << endl;
 	createOutTestFile(out_seq, nb_files, m_p_sequentielle, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
 	showTestData(nb_files, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq, cout);
-
-	out_para = "out-parallele.txt";
-	cout << "\nParallele (sans seuil pour l'instant)" << endl;
-	createOutTestFile(out_para, nb_files, m_p_parallele, g_m_parallele.getNumberWordTreated(), g_m_parallele.getDuration(), g_m_parallele.getThreadsWorkTime());
-	showTestData(nb_files, g_m_parallele.getNumberWordTreated(), g_m_parallele.getDuration(), out_para, cout);
 
 	temps_total = (g_m_parallele.getDuration() + g_m_sequentielle.getDuration()).count()/ 1000.f;
 	
 	//Algorithme sequetiel : __% du temps total
-	cout << "\nAlgorithme sequentiel :";
+	cout << endl << "Algorithme sequentiel :";
 	cout << g_m_sequentielle.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
 
 	//Algorithme parallèles :
-	cout << "\nAlgorithmes paralleles :" << endl;
+	cout << endl << "Algorithmes paralleles :" << endl;
 
 	// sans seuil sequentiel
 	cout << "	sans seuil sequentiel, " << g_m_parallele.getDuration().count() / (10.f*temps_total) << "% du temps total" << endl;
@@ -130,6 +137,12 @@ int main(int argc, char* argv[])
     unsigned i = 0;
     while (f_dtata >> f_d.files[i]) { if (i == (f_d.nb_files - 1)) break; ++i; }
     f_d.files.resize(f_d.nb_files);
+    unsigned wanted_nb_files = atoi(argv[3]);
+    if(wanted_nb_files > f_d.nb_files)
+    {
+        unsigned mult = log(wanted_nb_files / f_d.nb_files) / log(2) + 0.5f;
+        for (i = 0; i < mult; ++i) f_d.addFiles(f_d.files);
+    }
 
     f_dtata.close();
 	cout << " | " << f_d.nb_files << " fichiers a traiter charges en memoire..." << endl;
