@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 	// Prend le file data pour faire ses tests
     mr_w_files mr_w(f_d);
     vector<unsigned> caps{ 16, 32, 64, 128, 256, 512, 1024 };
-    runner rner(mr_w, f_d.nb_files, "");
+    runner rner(mr_w, f_d.nb_files, "cout.log", "");
     rner(caps, ".r1.home");
     rner(caps, ".r2.home");
     rner(caps, ".r3.home");

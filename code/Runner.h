@@ -1,5 +1,6 @@
 #pragma once
 #include "MRWFiles.h"
+#include "tLogger.h"
 #include <numeric>
 #include <iomanip>
 
@@ -8,8 +9,14 @@ struct runner
     mr_w_files mr_w;
     unsigned nb_files;
     string f_prefix;
+    t_logger<decltype(cout)>cout_log;
     runner() = delete;
-    runner(mr_w_files& mr_w, unsigned nb_files, string file_name_prefix) : mr_w{ mr_w }, nb_files{ nb_files }, f_prefix{ file_name_prefix } {}
+    runner(mr_w_files& mr_w, unsigned nb_files, string cout_log_f_name, string file_name_prefix) : 
+        mr_w{ mr_w }, 
+        nb_files{ nb_files }, 
+        f_prefix{ file_name_prefix }, 
+        cout_log{ make_tLogger(cout, cout_log_f_name) }
+    { }
 
     void operator()(vector<unsigned> caps, string f_suffix = "") 
     {
@@ -17,36 +24,42 @@ struct runner
         float temps_total;
         vector<unsigned> para_durations;
 
+        map<string, unsigned> m_p_exec;
+
         //Spanner un test
         // 1) La global metric
         //		On y passe le # de thread (si juste 1 = sequentiel)
         cout << "Traitement parallele debute" << endl;
 
-        GlobalMetric g_m_parallele_no_cap(thread::hardware_concurrency());
-        map<string, unsigned> m_p_parallele;
-        mr_w.start(m_p_parallele, &g_m_parallele_no_cap);
+        GlobalMetric g_m_scrap_run(thread::hardware_concurrency()),
+                     g_m_parallele_no_cap(thread::hardware_concurrency());
+        
+        mr_w.start(m_p_exec, &g_m_scrap_run);
+
+        m_p_exec.clear();
+
+        mr_w.start(m_p_exec, &g_m_parallele_no_cap);
 
         out_para = f_prefix + "out-parallele" + f_suffix;
-        cout << "\nParallele ( sans seuil )" << endl;
-        createOutTestFile(out_para, m_p_parallele, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getThreadsWorkTime());
+        cout_log << "\nParallele ( sans seuil )\n";
+        createOutTestFile(out_para, m_p_exec, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getThreadsWorkTime());
         showTestData(g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para, cout);
 
         for_each(caps.begin(), caps.end(), [&](unsigned cap)
         {
-            if(cap < nb_files) para_durations.push_back(parallele_cap(cap, m_p_parallele, f_suffix));
+            if(cap < nb_files) para_durations.push_back(parallele_cap(cap, m_p_exec, f_suffix));
         });
 
         // Sequentiel
 
-        cout << endl << "Traitement sequentiel debute" << endl;
+        cout_log << "\nTraitement sequentiel debute\n";
 
         GlobalMetric g_m_sequentielle(1);
-        map<string, unsigned> m_p_sequentielle;
-        mr_w.start(m_p_sequentielle, &g_m_sequentielle);
+        mr_w.start(m_p_exec, &g_m_sequentielle);
 
         out_seq = f_prefix + "out-sequentiel" + f_suffix;
         cout << endl << "Sequentielle" << endl;
-        createOutTestFile(out_seq, m_p_sequentielle, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
+        createOutTestFile(out_seq, m_p_exec, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
         showTestData(g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq, cout);
 
         temps_total = (chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() +
@@ -54,20 +67,22 @@ struct runner
             chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count());
 
         //Algorithme sequetiel : __% du temps total
-        cout << endl << "Algorithme sequentiel :";
-        cout << chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count() / temps_total * 100.f << "% du temps total" << endl;
+        cout_log << "\nAlgorithme sequentiel :";
+        cout_log << chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count() / temps_total * 100.f << "% du temps total\n";
 
         //Algorithme parallèles :
-        cout << endl << "Algorithmes paralleles :" << endl;
+        cout_log << "\nAlgorithmes paralleles :\n";
 
         // sans seuil sequentiel
-        cout << "	sans seuil sequentiel, " << chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() / temps_total * 100.f << "% du temps total" << endl;
+        cout_log << "	sans seuil sequentiel, " << chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() / temps_total * 100.f << "% du temps total\n";
 
         unsigned i = 0;
         for_each(para_durations.begin(), para_durations.end(), [&](unsigned& dur) {
-            cout << "	seuil sequentiel " << caps[i] << "  , " << dur / temps_total * 100.f << "% du temps total" << endl;
+            cout_log << "	seuil sequentiel " << caps[i] << "  , " << dur / temps_total * 100.f << "% du temps total\n";
             ++i;
         });
+
+        //writeDataCSV()
     }
 private:
     void show(map<string, unsigned> m_p)
