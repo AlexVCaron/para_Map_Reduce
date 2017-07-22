@@ -8,6 +8,8 @@ using time_length = timer::duration;
 using time_stamp = timer::time_point;
 using time_unit = std::chrono::milliseconds;
 
+typedef bool(*rule)(std::string);
+
 struct exec {};
 struct parallele_exec : exec {};
 struct sequentiel_exec : exec {};

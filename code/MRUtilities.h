@@ -107,4 +107,9 @@ void coalesceVector(std::vector<std::vector<T>> &v_t) {
     v_t.resize(1);
 }
 
+inline bool file_exist(const std::string& name) {
+    struct stat buffer;
+    return (stat(name.c_str(), &buffer) == 0);
+}
+
 #endif
