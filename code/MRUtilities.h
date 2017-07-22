@@ -1,6 +1,7 @@
 #ifndef REDUCE_H
 #define REDUCE_H
 
+#include <sys/stat.h>
 #include <vector>
 #include <map>
 #include <algorithm>

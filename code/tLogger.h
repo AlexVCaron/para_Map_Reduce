@@ -14,7 +14,7 @@ public:
 
     t_logger(std::string o_log_file_name, T& t) : log{ o_log_file_name }, os{t} {}
 
-    t_logger(t_logger&& o_osl) : os{ o_osl.os }, log{ o_osl.log } {}
+    t_logger(t_logger&& o_osl) noexcept : os{ o_osl.os }, log{ std::move(o_osl.log) } {}
 
     ~t_logger() {
         log.close();

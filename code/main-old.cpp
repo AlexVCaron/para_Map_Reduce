@@ -119,7 +119,7 @@ int main_old(int argc, char* argv[])
                 map<string, unsigned> m_p;
                 nb_w_treated->registerOperation();
                 auto t_start = t.now();
-                for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(path + '\\' + file, m_p); });
+                for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(path + '/' + file, m_p); });
                 *t_dur = t.now() - t_start;
                 nb_w_treated->allowOperation();
                 nb_w_treated->waitForTransform(&adder<size_t>::plus, nb_words_read);
@@ -139,7 +139,7 @@ int main_old(int argc, char* argv[])
         timer t;
         auto t_start = t.now();
         nb_w_treated.registerOperation();
-        for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '\\' + file, m_p[0]); });
+        for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '/' + file, m_p[0]); });
         v_time.back() = t.now() - t_start;
         nb_w_treated.allowOperation();
         while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingTransformations()) this_thread::sleep_for(40ms);

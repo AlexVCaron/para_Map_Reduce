@@ -1,6 +1,7 @@
 #ifndef HOUSE_TYPES_H
 #define HOUSE_TYPES_H
 
+#include <string>
 #include <chrono>
 
 using timer = std::chrono::high_resolution_clock;

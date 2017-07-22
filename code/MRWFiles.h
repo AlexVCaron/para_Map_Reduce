@@ -107,7 +107,7 @@ public:
             unsigned nb_words_read = 0;
             metric->beforeTest<tag>(t.now());
             for_each(f_d.begin(), f_d.end(), [&](string& file) {
-                nb_words_read += f_r.read(f_d.path + '\\' + file, m_p);
+                nb_words_read += f_r.read(f_d.path + '/' + file, m_p);
             });
             metric->afterTest<tag>(t.now(), nb_words_read);
         }
@@ -122,7 +122,7 @@ public:
                 if (nb_files_treated.getResultNoWait().t == 0u) return true;
                 nb_files_treated.registerOperation();
 
-                nb_words_read += f_r.read(f_d.path + "\\" + file, m_p);
+                nb_words_read += f_r.read(f_d.path + "/" + file, m_p);
 
                 nb_files_treated.waitForTransform(&subber<unsigned>::minus, 1u);
 

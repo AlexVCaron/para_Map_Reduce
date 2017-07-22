@@ -48,7 +48,7 @@ struct runner
 
             mr_w.start(m_p_exec, &g_m_parallele_no_cap);
             if (nb_words_read_ref != g_m_parallele_no_cap.getNumberWordTreated()) throw BadWordReadExecption();
-            string out_para = data_path + "\\exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_ths) + "th_uncap" + f_suffix;
+            string out_para = data_path + "/exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_ths) + "th_uncap" + f_suffix;
             cout_log << "\nParallele_" << nb_ths << "_threads ( sans seuil )\n";
             createOutTestFile(out_para, m_p_exec, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getThreadsWorkTime());
             showTestData(g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para);
@@ -68,7 +68,7 @@ struct runner
         GlobalMetric g_m_sequentielle(1);
         mr_w.start(m_p_exec, &g_m_sequentielle);
 
-        out_seq = data_path + "\\exec_" + to_string(nb_files) + "_out_sequentiel" + f_suffix;
+        out_seq = data_path + "/exec_" + to_string(nb_files) + "_out_sequentiel" + f_suffix;
         cout_log << "\nSequentielle\n";
         createOutTestFile(out_seq, m_p_exec, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
         showTestData(g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq);
@@ -111,8 +111,8 @@ private:
                       unsigned nb_total_mots, string data_path = "", string f_suffix = "", string rule_comment = " ", string time_unit = "ms")
     {
         string ruled = (rule_comment == " ") ? "unruled" : "ruled";  ofstream o_csv;
-        if(file_exist(data_path + "\\exec_" + to_string(nb_files) + ruled + f_suffix + ".csv")) o_csv.open(data_path + "\\exec_" + to_string(nb_files) + ruled + f_suffix + ".csv", ios::app);
-        else o_csv.open(data_path + "\\exec_" + to_string(nb_files) + ruled + f_suffix + ".csv");
+        if(file_exist(data_path + "/exec_" + to_string(nb_files) + ruled + f_suffix + ".csv")) o_csv.open(data_path + "/exec_" + to_string(nb_files) + ruled + f_suffix + ".csv", ios::app);
+        else o_csv.open(data_path + "/exec_" + to_string(nb_files) + ruled + f_suffix + ".csv");
 
         o_csv << "nb_total_mots," << nb_total_mots << endl;
 
@@ -226,7 +226,7 @@ private:
         m_p_parallele.clear();
         mr_w.start(m_p_parallele, &g_m_parallele_cap, cap);
         if (supposed_nb_word_read != g_m_parallele_cap.getNumberWordTreated()) throw BadWordReadExecption();
-        string out_para = data_path + "\\exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_threads) + "th_" + to_string(cap) + f_suffix;
+        string out_para = data_path + "/exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_threads) + "th_" + to_string(cap) + f_suffix;
         cout_log << "\nParallele_" << nb_threads << "_threads ( seuil " + to_string(cap) + " )\n";
         createOutTestFile(out_para, m_p_parallele, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getThreadsWorkTime());
         showTestData(g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para);
