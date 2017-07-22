@@ -1,9 +1,9 @@
 
 #include "MRUtilities.h"
 #include "MRWFiles.h"
+#include "Runner.h"
 #include <iomanip>
 #include <vector>
-#include "Runner.h"
 #include <sstream>
 
 struct in_args
@@ -85,8 +85,8 @@ int main(int argc, char* argv[])
         {
             unsigned mult = log(float(args.wanted_nb_files) / float(f_d.nb_files)) / log(2) + 0.5f;
             for (i = 0; i <= mult; ++i) f_d.addFiles(f_d.files);
-            exec(args, f_d);
         }
+        exec(args, f_d);
     }
     else if (args.mode == "exp")
     {
