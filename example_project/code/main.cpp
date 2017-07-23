@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
         if (args.wanted_nb_files > f_d.size)
         {
             unsigned mult = log(float(args.wanted_nb_files) / float(f_d.size)) / log(2) + 0.5f;
-            for (i = 0; i <= mult; ++i) f_d.addFiles(f_d.files);
+            for (i = 0; i < mult; ++i) f_d.addFiles(f_d.files);
         }
         exec(args, f_d);
     }
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     {
         unsigned mult = log(float(args.wanted_nb_files) / float(f_d.size)) / log(2) + 0.5f;
         exec(args, f_d);
-        for (i = 0; i <= mult; ++i) {
+        for (i = 0; i < mult; ++i) {
             f_d.addFiles(f_d.files);
             exec(args, f_d);
         }

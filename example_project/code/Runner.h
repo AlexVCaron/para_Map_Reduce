@@ -155,7 +155,9 @@ private:
                       unsigned nb_total_mots, string data_path = "", string f_suffix = "", string rule_comment = " ", string time_unit = "ms")
     {
         string ruled = (rule_comment == " ") ? "unruled" : "ruled";  ofstream o_csv;
-        string f_name = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + ruled + f_suffix + ".csv";
+        string f_name = data_path;
+        (data_path == "" ? f_name += "" : f_name += "/");
+        f_name += "exec_" + to_string(nb_files) + ruled + f_suffix + ".csv";
         if(file_exist(f_name)) o_csv.open(f_name, ios::app);
         else o_csv.open(f_name);
 
