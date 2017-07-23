@@ -16,7 +16,7 @@ struct runner
         cout_log{ make_tLogger(cout, cout_log_f_name) }
     { }
 
-    void operator()(vector<unsigned>& caps, vector<unsigned>& nb_threads, string data_path = "", string f_suffix = "", string rule_message = " ") 
+    void operator()(vector<unsigned>& caps, vector<unsigned>& nb_threads, unsigned nb_iter_average = 1, string data_path = "", string f_suffix = "", string rule_message = " ") 
     {
         string out_seq;
         float temps_total;
@@ -44,19 +44,39 @@ struct runner
         for_each(nb_threads.begin(), nb_threads.end(), [&](unsigned nb_ths)
         {
             times.clear();
-            GlobalMetric g_m_parallele_no_cap(nb_ths);
+            
+            unsigned duration = 0;
+            vector<unsigned> ex_times;
 
-            mr_w.start(m_p_exec, &g_m_parallele_no_cap);
-            if (nb_words_read_ref != g_m_parallele_no_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
             string out_para = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_ths) + "th_uncap" + f_suffix;
-            cout_log << "\nParallele_" << nb_ths << "_threads ( sans seuil )\n";
-            createOutTestFile(out_para, m_p_exec, g_m_parallele_no_cap.b_getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getExecutionTimes());
-            showTestData(g_m_parallele_no_cap.b_getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para);
-            para_durations.push_back(chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count());
 
-            times.emplace_back(0u, unsigned(chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count()));
+            for (unsigned i = 0; i < nb_iter_average; ++i) {
+                GlobalMetric g_m_parallele_no_cap(nb_ths);
+                m_p_exec.clear();
+                mr_w.start(m_p_exec, &g_m_parallele_no_cap);
+                if (nb_words_read_ref != g_m_parallele_no_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
+                if (i == 0) ex_times.resize(g_m_parallele_no_cap.getExecutionTimes().size(), 0);
+                duration += chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count() / nb_iter_average;
+                unsigned j = 0;
+                vector<time_length> t_ex_times = g_m_parallele_no_cap.getExecutionTimes();
+                for_each(t_ex_times.begin(), t_ex_times.end(), [&](time_length t)
+                {
+                    ex_times[j] += chrono::duration_cast<time_unit>(t).count() / nb_iter_average;
+                    ++j;
+                });
 
-            run(nb_ths, m_p_exec, nb_words_read_ref, para_durations, times, caps, data_path, f_suffix);
+                cout_log << "\nParallele_" << nb_ths << "_threads ( sans seuil )\n";
+
+                showTestData(g_m_parallele_no_cap.b_getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para);
+                
+            }
+
+            para_durations.push_back(duration);
+            createOutTestFile(out_para, m_p_exec, nb_words_read_ref, duration, ex_times);
+
+            times.emplace_back(0u, duration);
+
+            run(nb_ths, m_p_exec, nb_words_read_ref, nb_iter_average, para_durations, times, caps, data_path, f_suffix);
 
             exec_times.emplace_back(make_pair("parallele_" + to_string(nb_ths), times));
         });
@@ -64,36 +84,58 @@ struct runner
         // Sequentiel
 
         cout_log << "\nTraitement sequentiel debute\n";
-
-        GlobalMetric g_m_sequentielle(1);
-        mr_w.start(m_p_exec, &g_m_sequentielle);
+        unsigned seq_duration = 0;
+        vector<unsigned> ex_times(nb_iter_average, 0);
+        for (unsigned i = 0; i < nb_iter_average; ++i) {
+            GlobalMetric g_m_sequentielle(1);
+            mr_w.start(m_p_exec, &g_m_sequentielle);
+            seq_duration += chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count() / nb_iter_average;
+            unsigned j = 0;
+            vector<time_length> t_ex_times = g_m_sequentielle.getExecutionTimes();
+            for_each(t_ex_times.begin(), t_ex_times.end(), [&](time_length t)
+            {
+                ex_times[j] += chrono::duration_cast<time_unit>(t).count() / nb_iter_average;
+                ++j;
+            });
+            showTestData(g_m_sequentielle.b_getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq);
+        }
 
         out_seq = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_sequentiel" + f_suffix;
         cout_log << "\nSequentielle\n";
-        createOutTestFile(out_seq, m_p_exec, g_m_sequentielle.b_getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getExecutionTimes());
-        showTestData(g_m_sequentielle.b_getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq);
+        createOutTestFile(out_seq, m_p_exec, nb_words_read_ref, seq_duration, ex_times);
 
-        times.emplace_back(0u, unsigned(chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count()));
+
+        times.emplace_back(0u, seq_duration);
         exec_times.emplace_back(make_pair("sequentielle", times));
 
         times.clear();
 
-        temps_total = (accumulate(para_durations.begin(), para_durations.end(), unsigned(0)) +
-                       chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count());
-
-        //Algorithme sequetiel : __% du temps total
-        cout_log << "\nAlgorithme sequentiel :";
-        cout_log << chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count() / temps_total * 100.f << "% du temps total\n";
-
         for (int j = 0; j < nb_threads.size(); ++j) {
             unsigned i = 0;
+
+            unsigned nb_caps = 0;
+
+            find_if(caps.begin(), caps.end(), [&](unsigned& cap) {
+                if (cap > nb_files) return true;
+                ++nb_caps;
+                return false;
+            });
+
+            temps_total = (
+                accumulate(para_durations.begin() + j * (nb_caps + 1), para_durations.begin() + (j + 1) * (nb_caps + 1), unsigned(0)) +
+                seq_duration
+            );
+
+            cout_log << "\nAlgorithme sequentiel :";
+            cout_log << seq_duration / temps_total * 100.f << "% du temps total\n";
+
             //Algorithme parallèles :
             cout_log << "\nAlgorithmes paralleles " << nb_threads[j] << " threads :\n";
 
             // sans seuil sequentiel
             cout_log << "	sans seuil sequentiel, " << para_durations[i] / temps_total * 100.f << "% du temps total\n";
 
-            for_each(caps.begin(), caps.end(), [&](unsigned& cap) {
+            for_each(caps.begin(), caps.begin() + nb_caps, [&](unsigned& cap) {
                 if (cap <= nb_files) {
                     cout_log << "	seuil sequentiel " << cap << "  , " << para_durations[i + j + 1] / temps_total * 100.f << "% du temps total\n";
                     ++i;
@@ -136,12 +178,12 @@ private:
 
     class BadWordReadExecption {};
 
-    void run(unsigned nb_threads, map<string, unsigned>& m_p_exec, unsigned nb_words_read_ref, vector<unsigned>& para_durations, vector<pair<unsigned, unsigned>>& times, vector<unsigned> caps, string data_path, string f_suffix)
+    void run(unsigned nb_threads, map<string, unsigned>& m_p_exec, unsigned nb_words_read_ref, unsigned nb_iter_av, vector<unsigned>& para_durations, vector<pair<unsigned, unsigned>>& times, vector<unsigned> caps, string data_path, string f_suffix)
     {
         for_each(caps.begin(), caps.end(), [&](unsigned cap)
         {
             if (cap < nb_files) {
-                para_durations.push_back(parallele_cap(nb_threads, cap, m_p_exec, nb_words_read_ref, data_path, f_suffix));
+                para_durations.push_back(parallele_cap(nb_threads, cap, m_p_exec, nb_words_read_ref, nb_iter_av, data_path, f_suffix));
                 times.emplace_back(cap, para_durations.back());
             }
         });
@@ -177,9 +219,9 @@ private:
         out_stream << " +" << setfill('-') << setw(47) << "+" << endl;
     }
 
-    void showTestData(unsigned nb_mot_traites, time_length duration, ostream &out_stream)
+    void showTestData(unsigned nb_mot_traites, unsigned duration, ostream &out_stream)
     {
-        out_stream << nb_files << " fichiers, " << nb_mot_traites << " mots, " << chrono::duration_cast<time_unit>(duration).count() << " ms." << endl;
+        out_stream << nb_files << " fichiers, " << nb_mot_traites << " mots, " << duration << " ms." << endl;
     }
 
     void showTestData(unsigned nb_mot_traites, time_length duration, string test_out_filename)
@@ -188,7 +230,7 @@ private:
         cout_log << "Resultats detailles dans \"" << test_out_filename << "\"\n";
     }
 
-    void showTime(vector<time_length>& v_t, ostream &out_stream)
+    void showTime(vector<unsigned>& v_t, ostream &out_stream)
     {
         unsigned i = 0;
         auto end = v_t.end(); --end;
@@ -196,22 +238,24 @@ private:
         main_ts += *end;
         out_stream << endl;
         out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
-        out_stream << " |-> Thread_main" << " : " << chrono::duration_cast<time_unit>(main_ts).count() << setfill(' ') << setw(8) << "  (ms)" << endl;
+        out_stream << " |-> Thread_main" << " : " << main_ts << setfill(' ') << setw(8) << "  (ms)" << endl;
         if (v_t.size() > 2) out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
-        for_each(v_t.begin(), end, [&](time_length& t_s)
+        for_each(v_t.begin(), end, [&](unsigned& t_s)
         {
-            out_stream << "      |-> Thread_" << i << setfill(' ') << setw(4) << " : " << chrono::duration_cast<time_unit>(t_s).count() << setw(8) << "  (ms)" << endl;
+            out_stream << "      |-> Thread_" << i << setfill(' ') << setw(4) << " : " << t_s << setw(8) << "  (ms)" << endl;
             ++i;
         });
-        if (v_t.size() > 1) reduce(v_t, addVector<time_length>);
+        if (v_t.size() > 1) reduce(v_t, addVector<unsigned>);
         out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
-        out_stream << " | Temps de travail : " << chrono::duration_cast<time_unit>(v_t.front()).count() << " (ms)" << endl;
+        out_stream << " | Temps de travail : " << main_ts << " (ms)" << endl;
         out_stream << " +----+" << setfill('-') << setw(29) << "" << endl;
     }
 
-    void createOutTestFile(string filename, map<string, unsigned>& m_p, unsigned nb_mot_traite, time_length duration, vector<time_length> v_t)
+    void createOutTestFile(string filename, map<string, unsigned>& m_p, unsigned nb_mot_traite, unsigned duration, vector<unsigned> v_t)
     {
-        ofstream myfile(filename);
+        ofstream myfile;
+        if (file_exist(filename)) myfile.open(filename, ios::app);
+        else myfile.open(filename);
         if (myfile.is_open())
         {
             showTestData(nb_mot_traite, duration, myfile);
@@ -221,16 +265,35 @@ private:
         else cout << "Unable to open file";
     }
 
-    unsigned int parallele_cap(unsigned nb_threads, unsigned cap, map<string, unsigned> &m_p_parallele, unsigned supposed_nb_word_read, string data_path = "", string f_suffix = "")
+    unsigned int parallele_cap(unsigned nb_threads, unsigned cap, map<string, unsigned> &m_p_parallele, unsigned supposed_nb_word_read, unsigned nb_iter_average = 1, string data_path = "", string f_suffix = "")
     {
-        GlobalMetric g_m_parallele_cap(nb_threads);
-        m_p_parallele.clear();
-        mr_w.start(m_p_parallele, &g_m_parallele_cap, cap);
-        if (supposed_nb_word_read != g_m_parallele_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
+        unsigned duration = 0;
+        vector<unsigned> ex_times;
+
         string out_para = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_threads) + "th_" + to_string(cap) + f_suffix;
-        cout_log << "\nParallele_" << nb_threads << "_threads ( seuil " + to_string(cap) + " )\n";
-        createOutTestFile(out_para, m_p_parallele, g_m_parallele_cap.b_getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getExecutionTimes());
-        showTestData(g_m_parallele_cap.b_getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para);
-        return chrono::duration_cast<time_unit>(g_m_parallele_cap.getDuration()).count();
+
+        for (unsigned i = 0; i < nb_iter_average; ++i) {
+            GlobalMetric g_m_parallele_cap(nb_threads);
+            m_p_parallele.clear();
+            mr_w.start(m_p_parallele, &g_m_parallele_cap, cap);
+            if (supposed_nb_word_read != g_m_parallele_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
+            if (i == 0) ex_times.resize(g_m_parallele_cap.getExecutionTimes().size(), 0);
+            duration += chrono::duration_cast<time_unit>(g_m_parallele_cap.getDuration()).count() / nb_iter_average;
+            unsigned j = 0;
+            vector<time_length> t_ex_times = g_m_parallele_cap.getExecutionTimes();
+            for_each(t_ex_times.begin(), t_ex_times.end(), [&](time_length t)
+            {
+                ex_times[j] += chrono::duration_cast<time_unit>(t).count() / nb_iter_average;
+                ++j;
+            });
+
+            cout_log << "\nParallele_" << to_string(nb_threads) << "_threads ( seuil " + to_string(cap) + " )\n";
+
+            showTestData(g_m_parallele_cap.b_getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para);
+        }
+
+        createOutTestFile(out_para, m_p_parallele, supposed_nb_word_read, duration, ex_times);
+        
+        return duration;
     }
 };

@@ -18,6 +18,7 @@ struct in_args
     unsigned wanted_nb_files = 0;
     unsigned cap_max = 1024;
     unsigned nb_iter_runner = 1;
+    unsigned nb_iter_average = 1;
 
 };
 
@@ -139,7 +140,7 @@ void exec(in_args& args, files_data& f_d)
     runner rner(mr_w, f_d.size, args.cout_log);
 
     for (i = 0; i < args.nb_iter_runner; ++i) {
-        rner(caps, nb_threads, args.out_path_data, pre_suffix + (var_suffix ? "" : ".") + to_string(i) + mid_suffix + post_suffix);
+        rner(caps, nb_threads, args.nb_iter_average, args.out_path_data, pre_suffix + (var_suffix ? "" : ".") + to_string(i) + mid_suffix + post_suffix);
     }
 }
 
@@ -179,6 +180,10 @@ in_args parseInArgs(int argc, char* argv[])
                 stringstream::char_type u;
                 switch(c)
                 {
+                case stringstream::char_type('a'):
+                    ss.get(u); if (u != ' ') ss.unget();
+                    args.nb_iter_average = stoul(extractArg(ss).c_str());
+                    break;
                 case stringstream::char_type('i'):
                     ss.get(u); if (u != ' ') ss.unget();
                     args.nb_iter_runner = stoul(extractArg(ss).c_str());
