@@ -6,6 +6,8 @@
 #include "Metrics.h"
 #include "MapReduce.h"
 
+#include<string>
+
 class map_operation_impl
 {
 
