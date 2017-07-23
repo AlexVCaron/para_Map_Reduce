@@ -117,12 +117,12 @@ int main_old(int argc, char* argv[])
             {
                 unsigned nb_words_read = 0;                
                 map<string, unsigned> m_p;
-                nb_w_treated->registerOperation();
+                nb_w_treated->anounceFutureOperation();
                 auto t_start = t.now();
                 for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(path + '/' + file, m_p); });
                 *t_dur = t.now() - t_start;
                 nb_w_treated->allowOperation();
-                nb_w_treated->waitForTransform(&adder<size_t>::plus, nb_words_read);
+                nb_w_treated->b_treatOperation(&adder<size_t>::plus, nb_words_read);
                 return std::forward<map<string, unsigned>>(m_p);
             }, f_d.path, f_d.splitFiles(i * file_share, ((i + 1) * file_share) - 1).files, file_reader(w_i), timer(), &v_time[i], &nb_w_treated));
     }
@@ -138,19 +138,19 @@ int main_old(int argc, char* argv[])
         vector<string> files = f_d.splitFiles(f_d.nb_files - remaining_share - 1, f_d.nb_files - 1).files;
         timer t;
         auto t_start = t.now();
-        nb_w_treated.registerOperation();
+        nb_w_treated.anounceFutureOperation();
         for_each(files.begin(), files.end(), [&](string& file) { nb_words_read += f_r.read(f_d.path + '/' + file, m_p[0]); });
         v_time.back() = t.now() - t_start;
         nb_w_treated.allowOperation();
-        while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingTransformations()) this_thread::sleep_for(40ms);
-        nb_w_treated.startTransformations();
-        nb_w_treated.waitForTransform(&adder<size_t>::plus, nb_words_read);
+        while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingOperations()) this_thread::sleep_for(40ms);
+        nb_w_treated.allowOperations();
+        nb_w_treated.b_treatOperation(&adder<size_t>::plus, nb_words_read);
     }
     else {
         if (exec_parallele)
         {
-            while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingTransformations()) this_thread::sleep_for(40ms);
-            nb_w_treated.startTransformations();
+            while (nb_w_treated.registeredOperations() != nb_threads && total_nb_w_treated_ptr.hasPendingOperations()) this_thread::sleep_for(40ms);
+            nb_w_treated.allowOperations();
         }
         v_time.back() = time_length(0);
     }
@@ -167,7 +167,7 @@ int main_old(int argc, char* argv[])
 
     time_length g_red_time = (g_timer.now() - g_t_start) - g_map_time;
 
-    showData(m_p.front(), nb_w_treated.getResult().t);
+    showData(m_p.front(), nb_w_treated.b_getResult().t);
     showTime(v_time);
 
     cout << endl;

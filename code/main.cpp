@@ -1,10 +1,11 @@
 
 #include "MRUtilities.h"
-#include "MRWFiles.h"
+#include "MapReduce.h"
 #include "Runner.h"
 #include <iomanip>
 #include <vector>
 #include <sstream>
+#include <string>
 
 struct in_args
 {
@@ -67,30 +68,31 @@ int main(int argc, char* argv[])
 
     ifstream f_dtata(args.config_file);
 
-    f_dtata >> f_d.nb_files >> f_d.path;
+    f_dtata >> f_d.size >> f_d.path;
 
-    f_d.files.resize(f_d.nb_files);
+    f_d.files.resize(f_d.size);
 
     unsigned i = 0;
-    while (f_dtata >> f_d.files[i]) { if (i == (f_d.nb_files - 1)) break; ++i; }
+    while (f_dtata >> f_d.files[i]) { if (i == (f_d.size - 1)) break; ++i; }
 
     f_dtata.close();
 
-    f_d.files.resize(f_d.nb_files);
+    f_d.files.resize(f_d.size);
 
-    if (args.wanted_nb_files == 0u) args.wanted_nb_files = f_d.nb_files;
+    if (args.wanted_nb_files == 0u) args.wanted_nb_files = f_d.size;
 
     if (args.mode == "static") {
-        if (args.wanted_nb_files > f_d.nb_files)
+        if (args.wanted_nb_files > f_d.size)
         {
-            unsigned mult = log(float(args.wanted_nb_files) / float(f_d.nb_files)) / log(2) + 0.5f;
+            unsigned mult = log(float(args.wanted_nb_files) / float(f_d.size)) / log(2) + 0.5f;
             for (i = 0; i <= mult; ++i) f_d.addFiles(f_d.files);
         }
         exec(args, f_d);
     }
     else if (args.mode == "exp")
     {
-        unsigned mult = log(float(args.wanted_nb_files) / float(f_d.nb_files)) / log(2) + 0.5f;
+        unsigned mult = log(float(args.wanted_nb_files) / float(f_d.size)) / log(2) + 0.5f;
+        exec(args, f_d);
         for (i = 0; i <= mult; ++i) {
             f_d.addFiles(f_d.files);
             exec(args, f_d);
@@ -110,11 +112,11 @@ int main(int argc, char* argv[])
 
 void exec(in_args& args, files_data& f_d)
 {
-    cout << " | " << f_d.nb_files << " fichiers a traiter charges en memoire..." << endl;
+    cout << " | " << f_d.size << " fichiers a traiter charges en memoire..." << endl;
 
     //S'occupe de l'exec
     // Prend le file data pour faire ses tests
-    mr_w_files mr_w(f_d);
+    map_reduce mr_w(f_d);
 
     vector<unsigned> caps;
     unsigned i = 0; unsigned i_pow = pow(2, i);
@@ -134,7 +136,7 @@ void exec(in_args& args, files_data& f_d)
 
     bool var_suffix = checkIfVarSuffix(args.data_files_suffix, pre_suffix, post_suffix, mid_suffix);
 
-    runner rner(mr_w, f_d.nb_files, args.cout_log);
+    runner rner(mr_w, f_d.size, args.cout_log);
 
     for (i = 0; i < args.nb_iter_runner; ++i) {
         rner(caps, nb_threads, args.out_path_data, pre_suffix + (var_suffix ? "" : ".") + to_string(i) + mid_suffix + post_suffix);
@@ -179,7 +181,7 @@ in_args parseInArgs(int argc, char* argv[])
                 {
                 case stringstream::char_type('i'):
                     ss.get(u); if (u != ' ') ss.unget();
-                    args.nb_iter_runner = stoul(extractArg(ss));
+                    args.nb_iter_runner = stoul(extractArg(ss).c_str());
                     break;
                 case stringstream::char_type('o'):
                     ss.get(u); if (u != ' ') ss.unget();
@@ -187,19 +189,19 @@ in_args parseInArgs(int argc, char* argv[])
                     break;
                 case stringstream::char_type('t'):
                     ss.get(u); if (u != ' ') ss.unget();
-                    args.nb_threads_max = stoul(extractArg(ss));
+                    args.nb_threads_max = stoul(extractArg(ss).c_str());
                     break;
                 case stringstream::char_type('n'):
                     ss.get(u); if (u != ' ') ss.unget();
-                    args.wanted_nb_files = stoul(extractArg(ss));
+                    args.wanted_nb_files = stoul(extractArg(ss).c_str());
                     break;
                 case stringstream::char_type('m'):
                     ss.get(u); if (u != ' ') ss.unget();
-                    args.mode = stoul(extractArg(ss));
+                    args.mode = extractArg(ss).c_str();
                     break;
                 case stringstream::char_type('c'):
                     ss.get(u); if (u != ' ') ss.unget();
-                    args.cap_max = stoul(extractArg(ss));
+                    args.cap_max = stoul(extractArg(ss).c_str());
                     break;
                 case stringstream::char_type('s'):
                     ss.get(u); if (u != ' ') ss.unget();

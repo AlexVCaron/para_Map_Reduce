@@ -1,16 +1,16 @@
 #pragma once
-#include "MRWFiles.h"
+#include "MapReduce.h"
 #include "tLogger.h"
 #include <numeric>
 #include <iomanip>
 
 struct runner
 {
-    mr_w_files mr_w;
+    map_reduce mr_w;
     unsigned nb_files;
     t_logger<decltype(cout)> cout_log;
     runner() = delete;
-    runner(mr_w_files& mr_w, unsigned nb_files, string cout_log_f_name) : 
+    runner(map_reduce& mr_w, unsigned nb_files, string cout_log_f_name) : 
         mr_w{ mr_w }, 
         nb_files{ nb_files }, 
         cout_log{ make_tLogger(cout, cout_log_f_name) }
@@ -31,7 +31,7 @@ struct runner
         unsigned nb_words_read_ref;
 
         mr_w.start(m_p_exec, &g_m_scrap_run);
-        nb_words_read_ref = g_m_scrap_run.getNumberWordTreated();
+        nb_words_read_ref = g_m_scrap_run.b_getNumberWordTreated();
         m_p_exec.clear();
 
         //Spanner un test
@@ -47,11 +47,11 @@ struct runner
             GlobalMetric g_m_parallele_no_cap(nb_ths);
 
             mr_w.start(m_p_exec, &g_m_parallele_no_cap);
-            if (nb_words_read_ref != g_m_parallele_no_cap.getNumberWordTreated()) throw BadWordReadExecption();
+            if (nb_words_read_ref != g_m_parallele_no_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
             string out_para = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_ths) + "th_uncap" + f_suffix;
             cout_log << "\nParallele_" << nb_ths << "_threads ( sans seuil )\n";
-            createOutTestFile(out_para, m_p_exec, g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getThreadsWorkTime());
-            showTestData(g_m_parallele_no_cap.getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para);
+            createOutTestFile(out_para, m_p_exec, g_m_parallele_no_cap.b_getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), g_m_parallele_no_cap.getExecutionTimes());
+            showTestData(g_m_parallele_no_cap.b_getNumberWordTreated(), g_m_parallele_no_cap.getDuration(), out_para);
             para_durations.push_back(chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count());
 
             times.emplace_back(0u, unsigned(chrono::duration_cast<time_unit>(g_m_parallele_no_cap.getDuration()).count()));
@@ -70,8 +70,8 @@ struct runner
 
         out_seq = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_sequentiel" + f_suffix;
         cout_log << "\nSequentielle\n";
-        createOutTestFile(out_seq, m_p_exec, g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getThreadsWorkTime());
-        showTestData(g_m_sequentielle.getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq);
+        createOutTestFile(out_seq, m_p_exec, g_m_sequentielle.b_getNumberWordTreated(), g_m_sequentielle.getDuration(), g_m_sequentielle.getExecutionTimes());
+        showTestData(g_m_sequentielle.b_getNumberWordTreated(), g_m_sequentielle.getDuration(), out_seq);
 
         times.emplace_back(0u, unsigned(chrono::duration_cast<time_unit>(g_m_sequentielle.getDuration()).count()));
         exec_times.emplace_back(make_pair("sequentielle", times));
@@ -226,11 +226,11 @@ private:
         GlobalMetric g_m_parallele_cap(nb_threads);
         m_p_parallele.clear();
         mr_w.start(m_p_parallele, &g_m_parallele_cap, cap);
-        if (supposed_nb_word_read != g_m_parallele_cap.getNumberWordTreated()) throw BadWordReadExecption();
+        if (supposed_nb_word_read != g_m_parallele_cap.b_getNumberWordTreated()) throw BadWordReadExecption();
         string out_para = data_path + (data_path == "" ? "" : "/") + "exec_" + to_string(nb_files) + "_out_parallele_" + to_string(nb_threads) + "th_" + to_string(cap) + f_suffix;
         cout_log << "\nParallele_" << nb_threads << "_threads ( seuil " + to_string(cap) + " )\n";
-        createOutTestFile(out_para, m_p_parallele, g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getThreadsWorkTime());
-        showTestData(g_m_parallele_cap.getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para);
+        createOutTestFile(out_para, m_p_parallele, g_m_parallele_cap.b_getNumberWordTreated(), g_m_parallele_cap.getDuration(), g_m_parallele_cap.getExecutionTimes());
+        showTestData(g_m_parallele_cap.b_getNumberWordTreated(), g_m_parallele_cap.getDuration(), out_para);
         return chrono::duration_cast<time_unit>(g_m_parallele_cap.getDuration()).count();
     }
 };
