@@ -1,6 +1,6 @@
 #pragma once
-#include "MapReduce.h"
-#include "tLogger.h"
+#include "../../map_reduce/MapReduce.h"
+#include "../../map_reduce/tLogger.h"
 #include <numeric>
 #include <iomanip>
 

@@ -1,20 +1,21 @@
 
-#include "MRUtilities.h"
-#include "MapReduce.h"
+#include "../../map_reduce/MRUtilities.h"
+#include "../../map_reduce/MapReduce.h"
 #include "Runner.h"
 #include <iomanip>
 #include <vector>
 #include <sstream>
 #include <string>
+#include <thread>
 
 struct in_args
 {
-    string config_file;
-    string cout_log = "cout.log";
-    string out_path_data = "";
-    string data_files_suffix = "";
-    string mode = "static";
-    unsigned nb_threads_max = thread::hardware_concurrency();
+    std::string config_file;
+    std::string cout_log = "cout.log";
+    std::string out_path_data = "";
+    std::string data_files_suffix = "";
+    std::string mode = "static";
+    unsigned nb_threads_max = std::thread::hardware_concurrency();
     unsigned wanted_nb_files = 0;
     unsigned cap_max = 1024;
     unsigned nb_iter_runner = 1;
@@ -22,18 +23,18 @@ struct in_args
 
 };
 
-bool checkIfVarSuffix(string suffix, string& pre, string& post, string& mid)
+bool checkIfVarSuffix(std::string suffix, std::string& pre, std::string& post, std::string& mid)
 {
-    stringstream ss{ suffix };
-    stringstream::char_type c, tmp;
+    std::stringstream ss{ suffix };
+    std::stringstream::char_type c, tmp;
     while(ss >> c)
     {
-        if (c == stringstream::char_type('{'))
+        if (c == std::stringstream::char_type('{'))
         {
             tmp = c;
-            string tag = "";
+            std::string tag = "";
             bool contain_tag = false;
-            while(ss >> c && c != stringstream::char_type('}'))
+            while(ss >> c && c != std::stringstream::char_type('}'))
             {
                 tag += c;
                 if (tag == "i_s#") {
@@ -57,6 +58,8 @@ bool checkIfVarSuffix(string suffix, string& pre, string& post, string& mid)
 
     return false;
 }
+
+using namespace std;
 
 int main(int argc, char* argv[])
 {
