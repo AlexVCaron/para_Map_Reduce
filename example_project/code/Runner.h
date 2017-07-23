@@ -4,6 +4,8 @@
 #include <numeric>
 #include <iomanip>
 
+using namespace std;
+
 struct runner
 {
     map_reduce mr_w;

@@ -7,6 +7,7 @@
 #include "MapReduce.h"
 
 #include<string>
+#include <vector>
 
 class map_operation_impl
 {
@@ -42,7 +43,7 @@ private:
 
         metric->beforeTest<tag>(t.now());
 
-        for_each(workload.begin(), workload.end(), [&](string& file) {
+        for_each(workload.begin(), workload.end(), [&](std::string& file) {
             nb_words_read += reader.read(workload.path + '/' + file, m_p);
         });
 
@@ -59,7 +60,7 @@ private:
 
         metric->beforeTest<tag>(t.now());
 
-        auto last_treated_file_it = find_if(workload.begin(), workload.end(), [&](string& file) {
+        auto last_treated_file_it = find_if(workload.begin(), workload.end(), [&](std::string& file) {
             if (nb_files_treated.getResult().t == 0u) return true;
 
             nb_files_treated.anounceFutureOperation();
@@ -71,7 +72,7 @@ private:
             return false;
         });
 
-        vector<string> v_i(last_treated_file_it, workload.end());
+        std::vector<std::string> v_i(last_treated_file_it, workload.end());
         remaining_files->b_treatOperation(&files_data::addFiles, v_i);
 
         metric->afterTest<tag>(t.now(), nb_words_read);

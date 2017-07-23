@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <future>
+#include <string>
 
 using namespace std;
 
