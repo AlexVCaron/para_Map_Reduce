@@ -1,4 +1,7 @@
 
 # Exclude non template test metadata files
 f_data_in_*
-vs_projs/
+vs_projs/*
+archives/
+example_project/exec_data/*
+*.log
